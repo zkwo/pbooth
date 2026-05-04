@@ -3,104 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Photobooth Pro UI</title>
+
+<title>iPhone Photobooth</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
 body {
-  background: linear-gradient(180deg, #0a0a0a, #000);
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #000;
+  font-family: -apple-system, BlinkMacSystemFont, "San Francisco", sans-serif;
 }
 
 /* GLASS */
 .glass {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(25px);
+}
+
+/* TOOLBAR */
+.toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px;
+  display: flex;
+  justify-content: space-around;
+  background: rgba(0,0,0,0.7);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.08);
 }
 
 /* BUTTON */
-.btn:active { transform: scale(0.95); }
+.btn {
+  background: rgba(255,255,255,0.1);
+  padding: 10px 15px;
+  border-radius: 12px;
+}
 
 /* COUNT */
 .countdown {
   position: absolute;
   font-size: 80px;
-  font-weight: bold;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* PREVIEW */
-.preview-box {
-  border-radius: 20px;
-  overflow: hidden;
+/* PAPER FRAME */
+.frame-paper {
+  background: url('https://i.imgur.com/8Km9tLL.png');
+  background-size: cover;
+  padding: 25px;
 }
 
-/* FRAME STYLE */
 .frame-polaroid {
   background: white;
-  padding: 15px 15px 50px 15px;
+  padding: 15px 15px 60px 15px;
 }
+
 .frame-black {
   background: black;
   padding: 20px;
 }
-.frame-minimal {
-  background: #111;
-  padding: 10px;
+
+.preview img {
+  border-radius: 10px;
+  margin-bottom: 10px;
 }
 
-.flash {
-  animation: flash 0.2s;
+/* HISTORY */
+.history {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
 }
-@keyframes flash {
-  from { background: white; }
-  to { background: transparent; }
+.history img {
+  width: 80px;
+  border-radius: 10px;
 }
 </style>
 </head>
 
-<body class="text-white flex flex-col items-center justify-center min-h-screen p-4">
+<body class="text-white">
 
-<!-- CAMERA -->
-<div class="w-full max-w-md glass p-4 rounded-3xl">
+<div class="p-4 max-w-md mx-auto">
 
-  <h1 class="text-center mb-2">📸 Photobooth</h1>
-
+  <!-- CAMERA -->
   <div class="relative">
     <video id="video" autoplay playsinline class="w-full h-[300px] object-cover rounded-xl"></video>
     <div id="count" class="countdown hidden"></div>
   </div>
 
   <!-- MODE -->
-  <div class="flex gap-2 mt-3 overflow-x-auto">
-    <button onclick="setMode(1)" class="glass px-3 py-1 rounded-xl">Manual</button>
-    <button onclick="setMode(3)" class="glass px-3 py-1 rounded-xl">3 Foto</button>
-    <button onclick="setMode(4)" class="glass px-3 py-1 rounded-xl">4 Foto</button>
+  <div class="flex gap-2 mt-3">
+    <button onclick="setMode(1)" class="btn">1x</button>
+    <button onclick="setMode(3)" class="btn">3x</button>
+    <button onclick="setMode(4)" class="btn">4x</button>
   </div>
 
-  <button onclick="startCapture()" class="mt-4 w-full py-3 glass rounded-xl">
-    Ambil Foto
-  </button>
+  <!-- FRAME SELECT -->
+  <div class="flex gap-2 mt-3 overflow-x-auto">
+    <button onclick="setFrame('paper')" class="btn">Paper</button>
+    <button onclick="setFrame('polaroid')" class="btn">Polaroid</button>
+    <button onclick="setFrame('black')" class="btn">Black</button>
+  </div>
+
+  <!-- PREVIEW -->
+  <div id="preview" class="mt-4 preview"></div>
+
+  <!-- HISTORY -->
+  <div class="mt-4">
+    <p class="text-sm opacity-60 mb-1">History</p>
+    <div id="history" class="history"></div>
+  </div>
 
 </div>
 
-<!-- PREVIEW -->
-<div class="w-full max-w-md mt-5 text-center">
-
-  <div id="previewContainer" class="preview-box"></div>
-
-  <!-- FRAME SELECT -->
-  <div class="flex gap-2 mt-3 justify-center">
-    <button onclick="applyFrame('polaroid')" class="glass px-3 py-1 rounded-xl">Polaroid</button>
-    <button onclick="applyFrame('black')" class="glass px-3 py-1 rounded-xl">Black</button>
-    <button onclick="applyFrame('minimal')" class="glass px-3 py-1 rounded-xl">Minimal</button>
-  </div>
-
-  <a id="download" class="block mt-3 opacity-70">Belum ada hasil</a>
-
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button onclick="startCapture()" class="btn">📸</button>
+  <button onclick="saveImage()" class="btn">💾</button>
+  <button onclick="resetAll()" class="btn">🗑️</button>
 </div>
 
 <canvas id="canvas" class="hidden"></canvas>
@@ -109,20 +132,24 @@ body {
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const countEl = document.getElementById("count");
-const previewContainer = document.getElementById("previewContainer");
-const download = document.getElementById("download");
+const preview = document.getElementById("preview");
+const historyBox = document.getElementById("history");
 
 let mode = 1;
+let frame = "paper";
 let photos = [];
-let currentFrame = "polaroid";
 
 /* CAMERA */
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
 .then(stream => video.srcObject = stream);
 
 /* MODE */
-function setMode(m) {
-  mode = m;
+function setMode(m) { mode = m; }
+
+/* FRAME */
+function setFrame(f) {
+  frame = f;
+  renderPreview();
 }
 
 /* COUNTDOWN */
@@ -150,12 +177,7 @@ function capture() {
   const ctx = canvas.getContext("2d");
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-
   ctx.drawImage(video, 0, 0);
-
-  document.body.classList.add("flash");
-  setTimeout(() => document.body.classList.remove("flash"), 150);
-
   return canvas.toDataURL();
 }
 
@@ -173,57 +195,62 @@ async function startCapture() {
 
 /* PREVIEW */
 function renderPreview() {
-  previewContainer.innerHTML = "";
+  preview.innerHTML = "";
 
-  const frame = document.createElement("div");
-  frame.className = "p-2";
+  const frameDiv = document.createElement("div");
 
-  if (currentFrame === "polaroid") frame.classList.add("frame-polaroid");
-  if (currentFrame === "black") frame.classList.add("frame-black");
-  if (currentFrame === "minimal") frame.classList.add("frame-minimal");
+  if (frame === "paper") frameDiv.className = "frame-paper";
+  if (frame === "polaroid") frameDiv.className = "frame-polaroid";
+  if (frame === "black") frameDiv.className = "frame-black";
 
   photos.forEach(p => {
     const img = document.createElement("img");
     img.src = p;
-    img.className = "w-full mb-2 rounded-lg";
-    frame.appendChild(img);
+    frameDiv.appendChild(img);
   });
 
-  previewContainer.appendChild(frame);
-
-  generateDownload(frame);
+  preview.appendChild(frameDiv);
 }
 
-/* FRAME SWITCH */
-function applyFrame(type) {
-  currentFrame = type;
-  renderPreview();
-}
+/* SAVE */
+function saveImage() {
+  if (!preview.firstChild) return;
 
-/* DOWNLOAD */
-function generateDownload(frame) {
-  const rect = frame.getBoundingClientRect();
+  html2canvas(preview.firstChild).then(canvasData => {
+    const data = canvasData.toDataURL();
 
-  const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = rect.width * 2;
-  tempCanvas.height = rect.height * 2;
+    let history = JSON.parse(localStorage.getItem("photoHistory") || "[]");
+    history.unshift(data);
+    localStorage.setItem("photoHistory", JSON.stringify(history));
 
-  const ctx = tempCanvas.getContext("2d");
-  ctx.scale(2,2);
-
-  html2canvas(frame).then(canvasData => {
-    ctx.drawImage(canvasData, 0, 0);
-
-    const data = tempCanvas.toDataURL("image/png");
-    download.href = data;
-    download.download = "photobooth.png";
-    download.innerText = "⬇️ Download";
+    loadHistory();
   });
 }
+
+/* LOAD HISTORY */
+function loadHistory() {
+  historyBox.innerHTML = "";
+
+  let history = JSON.parse(localStorage.getItem("photoHistory") || "[]");
+
+  history.forEach(img => {
+    const el = document.createElement("img");
+    el.src = img;
+    el.onclick = () => {
+      preview.innerHTML = `<img src="${img}" class="rounded-xl">`;
+    };
+    historyBox.appendChild(el);
+  });
+}
+
+/* RESET */
+function resetAll() {
+  photos = [];
+  preview.innerHTML = "";
+}
+
+loadHistory();
 </script>
 
-<!-- html2canvas -->
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
 </body>
-</html>
+  </html>
