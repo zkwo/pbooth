@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photobooth Pro</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body {
+  background: linear-gradient(180deg, #0a0a0a, #000);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.glass {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.btn:active { transform: scale(0.95); }
+
+.countdown {
+  position: absolute;
+  font-size: 90px;
+  font-weight: bold;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.flash {
+  animation: flash 0.2s;
+}
+@keyframes flash {
+  from { background: white; }
+  to { background: transparent; }
+}
+</style>
+</head>
+
+<body class="text-white flex items-center justify-center min-h-screen">
+
+<div class="w-full max-w-md px-4">
+
+  <div class="glass rounded-3xl p-4 text-center">
+
+    <h1 class="text-lg mb-3 opacity-80">📸 Photobooth Strip</h1>
+
+    <div class="relative">
+      <video id="video" autoplay playsinline class="w-full h-[350px] object-cover rounded-2xl"></video>
+      <div id="count" class="countdown hidden"></div>
+    </div>
+
+    <!-- FRAME SELECT -->
+    <div class="flex gap-2 mt-3 overflow-x-auto">
+      <button onclick="setFrame('black')" class="glass px-3 py-1 rounded-xl">Black</button>
+      <button onclick="setFrame('white')" class="glass px-3 py-1 rounded-xl">White</button>
+      <button onclick="setFrame('minimal')" class="glass px-3 py-1 rounded-xl">Minimal</button>
+    </div>
+
+    <button onclick="startStrip()" class="mt-4 w-full py-3 glass rounded-2xl">
+      Mulai Photostrip
+    </button>
+
+    <a id="download" class="block mt-3 text-sm opacity-60">Belum ada foto</a>
+
+  </div>
+
+</div>
+
+<canvas id="canvas" class="hidden"></canvas>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const countEl = document.getElementById("count");
+const download = document.getElementById("download");
+
+let photos = [];
+let frameStyle = "black";
+
+/* CAMERA */
+async function startCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user" },
+    audio: false
+  });
+  video.srcObject = stream;
+}
+startCamera();
+
+/* FRAME */
+function setFrame(style) {
+  frameStyle = style;
+}
+
+/* COUNTDOWN */
+function countdown() {
+  return new Promise(resolve => {
+    let count = 3;
+    countEl.classList.remove("hidden");
+    countEl.innerText = count;
+
+    const interval = setInterval(() => {
+      count--;
+      if (count === 0) {
+        clearInterval(interval);
+        countEl.classList.add("hidden");
+        resolve();
+      } else {
+        countEl.innerText = count;
+      }
+    }, 800);
+  });
+}
+
+/* TAKE PHOTO */
+function capture() {
+  const ctx = canvas.getContext("2d");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  document.body.classList.add("flash");
+  setTimeout(() => document.body.classList.remove("flash"), 150);
+
+  new Audio("https://www.soundjay.com/mechanical/camera-shutter-click.mp3").play();
+
+  return canvas.toDataURL("image/png");
+}
+
+/* START STRIP */
+async function startStrip() {
+  photos = [];
+
+  for (let i = 0; i < 4; i++) {
+    await countdown();
+    photos.push(capture());
+  }
+
+  generateStrip();
+}
+
+/* GENERATE STRIP */
+function generateStrip() {
+  const strip = document.createElement("canvas");
+  const ctx = strip.getContext("2d");
+
+  const width = 600;
+  const height = 4 * 400 + 200;
+
+  strip.width = width;
+  strip.height = height;
+
+  /* BACKGROUND FRAME */
+  if (frameStyle === "black") {
+    ctx.fillStyle = "#000";
+  } else if (frameStyle === "white") {
+    ctx.fillStyle = "#fff";
+  } else {
+    ctx.fillStyle = "#111";
+  }
+  ctx.fillRect(0, 0, width, height);
+
+  let y = 50;
+
+  photos.forEach(src => {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+      ctx.drawImage(img, 50, y, 500, 350);
+    };
+    y += 380;
+  });
+
+  setTimeout(() => {
+    const data = strip.toDataURL("image/png");
+    download.href = data;
+    download.download = "photostrip.png";
+    download.innerText = "⬇️ Download Photostrip";
+  }, 800);
+}
+</script>
+
+</body>
+</html>
