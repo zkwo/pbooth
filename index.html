@@ -3,254 +3,238 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>iPhone Photobooth</title>
+<title>Serenity Booth</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
 body {
-  background: #000;
-  font-family: -apple-system, BlinkMacSystemFont, "San Francisco", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(180deg,#f3f4f6,#e5e7eb);
 }
 
-/* GLASS */
-.glass {
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(25px);
-}
+/* HIDE PAGE */
+.page { display:none; }
+.active { display:block; }
 
-/* TOOLBAR */
-.toolbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  padding: 10px;
-  display: flex;
-  justify-content: space-around;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(20px);
+/* CARD */
+.card {
+  background:white;
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.05);
 }
 
 /* BUTTON */
-.btn {
-  background: rgba(255,255,255,0.1);
-  padding: 10px 15px;
-  border-radius: 12px;
+.btn-main {
+  background: linear-gradient(90deg,#a855f7,#ec4899);
+  color:white;
+  padding:14px;
+  border-radius:20px;
+  width:100%;
 }
 
-/* COUNT */
-.countdown {
-  position: absolute;
-  font-size: 80px;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+/* LAYOUT BOX */
+.layout-box {
+  border-radius:15px;
+  padding:10px;
+  background:#f9fafb;
 }
 
-/* PAPER FRAME */
-.frame-paper {
-  background: url('https://i.imgur.com/8Km9tLL.png');
-  background-size: cover;
-  padding: 25px;
+/* PHOTO FRAME */
+.frame {
+  border-radius:20px;
+  padding:15px;
+  background:white;
 }
 
-.frame-polaroid {
-  background: white;
-  padding: 15px 15px 60px 15px;
+/* STICKER */
+.sticker {
+  width:40px;
+  cursor:pointer;
 }
 
-.frame-black {
-  background: black;
-  padding: 20px;
-}
-
-.preview img {
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
-
-/* HISTORY */
-.history {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-}
-.history img {
-  width: 80px;
-  border-radius: 10px;
+/* CANVAS BOX */
+#photoArea img {
+  border-radius:10px;
 }
 </style>
 </head>
 
-<body class="text-white">
+<body class="p-4">
 
-<div class="p-4 max-w-md mx-auto">
+<!-- ================= LANDING ================= -->
+<div id="home" class="page active max-w-md mx-auto text-center">
 
-  <!-- CAMERA -->
-  <div class="relative">
-    <video id="video" autoplay playsinline class="w-full h-[300px] object-cover rounded-xl"></video>
-    <div id="count" class="countdown hidden"></div>
-  </div>
+<h1 class="text-2xl font-bold mb-3 text-purple-600">Serenity Booth</h1>
 
-  <!-- MODE -->
-  <div class="flex gap-2 mt-3">
-    <button onclick="setMode(1)" class="btn">1x</button>
-    <button onclick="setMode(3)" class="btn">3x</button>
-    <button onclick="setMode(4)" class="btn">4x</button>
-  </div>
+<h2 class="text-3xl font-bold mb-2">Capture Memories</h2>
+<p class="mb-4 text-gray-500">Create stunning photo strips instantly</p>
 
-  <!-- FRAME SELECT -->
-  <div class="flex gap-2 mt-3 overflow-x-auto">
-    <button onclick="setFrame('paper')" class="btn">Paper</button>
-    <button onclick="setFrame('polaroid')" class="btn">Polaroid</button>
-    <button onclick="setFrame('black')" class="btn">Black</button>
-  </div>
-
-  <!-- PREVIEW -->
-  <div id="preview" class="mt-4 preview"></div>
-
-  <!-- HISTORY -->
-  <div class="mt-4">
-    <p class="text-sm opacity-60 mb-1">History</p>
-    <div id="history" class="history"></div>
-  </div>
+<button onclick="goPage('layout')" class="btn-main">
+📸 Start Photo Session
+</button>
 
 </div>
 
-<!-- TOOLBAR -->
-<div class="toolbar">
-  <button onclick="startCapture()" class="btn">📸</button>
-  <button onclick="saveImage()" class="btn">💾</button>
-  <button onclick="resetAll()" class="btn">🗑️</button>
+
+<!-- ================= LAYOUT ================= -->
+<div id="layout" class="page max-w-md mx-auto">
+
+<h2 class="text-xl font-bold mb-4">Select Layout</h2>
+
+<div class="space-y-3">
+
+<div class="card flex justify-between">
+  <p>Classic Four</p>
+  <button onclick="selectLayout(4)">Select</button>
 </div>
 
-<canvas id="canvas" class="hidden"></canvas>
+<div class="card flex justify-between">
+  <p>Vertical Duo</p>
+  <button onclick="selectLayout(2)">Select</button>
+</div>
+
+<div class="card flex justify-between">
+  <p>Dynamic Six</p>
+  <button onclick="selectLayout(6)">Select</button>
+</div>
+
+</div>
+
+</div>
+
+
+<!-- ================= SESSION ================= -->
+<div id="session" class="page max-w-md mx-auto">
+
+<h2 class="text-xl font-bold mb-3">Capture your set</h2>
+
+<!-- CAMERA -->
+<video id="video" autoplay playsinline class="w-full rounded-xl mb-3"></video>
+
+<button onclick="takePhoto()" class="btn-main mb-3">📸 Take Photo</button>
+
+<!-- RESULT -->
+<div id="photoArea" class="frame mb-3"></div>
+
+<!-- ACTION -->
+<div class="flex gap-2">
+<button onclick="downloadImage()" class="btn-main">Download</button>
+<button onclick="resetPhotos()" class="bg-gray-200 p-3 rounded-xl w-full">Retake</button>
+</div>
+
+<!-- COLOR -->
+<h3 class="mt-5 mb-2 font-semibold">Choose color</h3>
+<div class="flex gap-2 flex-wrap">
+<div onclick="setColor('#fff')" class="w-8 h-8 rounded-full bg-white border"></div>
+<div onclick="setColor('#fcd34d')" class="w-8 h-8 rounded-full bg-yellow-400"></div>
+<div onclick="setColor('#fb7185')" class="w-8 h-8 rounded-full bg-pink-400"></div>
+<div onclick="setColor('#60a5fa')" class="w-8 h-8 rounded-full bg-blue-400"></div>
+</div>
+
+<!-- STICKER -->
+<h3 class="mt-5 mb-2 font-semibold">Add sticker</h3>
+<div class="flex gap-2 flex-wrap">
+<img src="https://cdn-icons-png.flaticon.com/512/742/742751.png" class="sticker" onclick="addSticker(this.src)">
+<img src="https://cdn-icons-png.flaticon.com/512/833/833472.png" class="sticker" onclick="addSticker(this.src)">
+<img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" class="sticker" onclick="addSticker(this.src)">
+</div>
+
+</div>
+
 
 <script>
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const countEl = document.getElementById("count");
-const preview = document.getElementById("preview");
-const historyBox = document.getElementById("history");
-
-let mode = 1;
-let frame = "paper";
+let currentPage = "home";
+let layoutCount = 4;
 let photos = [];
+let color = "#fff";
+
+const video = document.getElementById("video");
 
 /* CAMERA */
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-.then(stream => video.srcObject = stream);
+navigator.mediaDevices.getUserMedia({video:true})
+.then(s => video.srcObject = s);
 
-/* MODE */
-function setMode(m) { mode = m; }
-
-/* FRAME */
-function setFrame(f) {
-  frame = f;
-  renderPreview();
+/* PAGE */
+function goPage(p){
+  document.getElementById(currentPage).classList.remove("active");
+  document.getElementById(p).classList.add("active");
+  currentPage = p;
 }
 
-/* COUNTDOWN */
-function countdown() {
-  return new Promise(resolve => {
-    let c = 3;
-    countEl.classList.remove("hidden");
-    countEl.innerText = c;
-
-    const i = setInterval(() => {
-      c--;
-      if (c === 0) {
-        clearInterval(i);
-        countEl.classList.add("hidden");
-        resolve();
-      } else {
-        countEl.innerText = c;
-      }
-    }, 800);
-  });
+/* SELECT LAYOUT */
+function selectLayout(n){
+  layoutCount = n;
+  goPage("session");
 }
 
-/* CAPTURE */
-function capture() {
-  const ctx = canvas.getContext("2d");
+/* TAKE PHOTO */
+function takePhoto(){
+  if(photos.length >= layoutCount) return;
+
+  const canvas = document.createElement("canvas");
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0);
-  return canvas.toDataURL();
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video,0,0);
+
+  photos.push(canvas.toDataURL());
+
+  renderPhotos();
 }
 
-/* START */
-async function startCapture() {
-  photos = [];
+/* RENDER */
+function renderPhotos(){
+  const area = document.getElementById("photoArea");
+  area.innerHTML = "";
+  area.style.background = color;
 
-  for (let i = 0; i < mode; i++) {
-    await countdown();
-    photos.push(capture());
-  }
-
-  renderPreview();
-}
-
-/* PREVIEW */
-function renderPreview() {
-  preview.innerHTML = "";
-
-  const frameDiv = document.createElement("div");
-
-  if (frame === "paper") frameDiv.className = "frame-paper";
-  if (frame === "polaroid") frameDiv.className = "frame-polaroid";
-  if (frame === "black") frameDiv.className = "frame-black";
-
-  photos.forEach(p => {
+  photos.forEach(p=>{
     const img = document.createElement("img");
     img.src = p;
-    frameDiv.appendChild(img);
-  });
-
-  preview.appendChild(frameDiv);
-}
-
-/* SAVE */
-function saveImage() {
-  if (!preview.firstChild) return;
-
-  html2canvas(preview.firstChild).then(canvasData => {
-    const data = canvasData.toDataURL();
-
-    let history = JSON.parse(localStorage.getItem("photoHistory") || "[]");
-    history.unshift(data);
-    localStorage.setItem("photoHistory", JSON.stringify(history));
-
-    loadHistory();
+    img.className = "mb-2";
+    area.appendChild(img);
   });
 }
 
-/* LOAD HISTORY */
-function loadHistory() {
-  historyBox.innerHTML = "";
+/* COLOR */
+function setColor(c){
+  color = c;
+  renderPhotos();
+}
 
-  let history = JSON.parse(localStorage.getItem("photoHistory") || "[]");
+/* STICKER */
+function addSticker(src){
+  const img = document.createElement("img");
+  img.src = src;
+  img.style.position = "absolute";
+  img.style.width = "50px";
+  img.style.top = "10px";
+  img.style.left = "10px";
 
-  history.forEach(img => {
-    const el = document.createElement("img");
-    el.src = img;
-    el.onclick = () => {
-      preview.innerHTML = `<img src="${img}" class="rounded-xl">`;
-    };
-    historyBox.appendChild(el);
-  });
+  document.getElementById("photoArea").appendChild(img);
 }
 
 /* RESET */
-function resetAll() {
+function resetPhotos(){
   photos = [];
-  preview.innerHTML = "";
+  renderPhotos();
 }
 
-loadHistory();
+/* DOWNLOAD */
+function downloadImage(){
+  html2canvas(document.getElementById("photoArea"))
+  .then(c=>{
+    const a = document.createElement("a");
+    a.href = c.toDataURL();
+    a.download = "photobooth.png";
+    a.click();
+  });
+}
 </script>
 
 </body>
-  </html>
+    </html>
